@@ -19,6 +19,7 @@ CREATE TABLE ledger_entries (
     amount BIGINT NOT NULL,
     account_id UUID NOT NULL,
     transaction_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (account_id) REFERENCES accounts (id),
     FOREIGN KEY (transaction_id) REFERENCES transactions (id),
     constraint CHK_VALID CHECK (amount <> 0)
