@@ -1,4 +1,5 @@
-package main
+// Package ledger provides type, interface and functions for a double entry ledger architecture
+package ledger
 
 import (
 	"context"
@@ -19,6 +20,12 @@ const (
 	updateAccountBalance       = `UPDATE accounts SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING id, balance, allowed_overdraft, created_at, updated_at`
 )
 
+type LedgerStore interface {
+	CreateAccount(ctx context.Context, a CreateAccountParams) (*Account, error)
+	FetchAccount(ctx context.Context, id uuid.UUID) (*Account, error)
+	ExecuteTransfer(ctx context.Context, t TransferParams) (*Transaction, error)
+}
+
 type TransferParams struct {
 	IdempotencyKey string
 	FromAccountID  uuid.UUID
@@ -35,6 +42,10 @@ type PostgresLedgerStore struct {
 	pool *pgxpool.Pool
 }
 
+func createNewLedgerStore(pool *pgxpool.Pool) *PostgresLedgerStore {
+	return &PostgresLedgerStore{pool: pool}
+}
+
 func (p *PostgresLedgerStore) CreateAccount(ctx context.Context, a CreateAccountParams) (*Account, error) {
 	/*
 	* Take parsing arguments -> Perform some kind of validation if not done before call is made ->
@@ -43,7 +54,7 @@ func (p *PostgresLedgerStore) CreateAccount(ctx context.Context, a CreateAccount
 
 	// Check to see if a negative balance is passed without an overdraft present on the account
 	if a.StartingBalance < 0 && !a.AllowedOverdraft {
-		return nil, fmt.Errorf("Cannot have a negative starting balance if an overdraft is not active.")
+		return nil, fmt.Errorf("cannot have a negative starting balance if an overdraft is not active.")
 	}
 
 	// Creating UUID to pass into Query Row function and create struct for return obj
